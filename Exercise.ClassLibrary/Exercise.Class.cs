@@ -15,8 +15,6 @@ namespace Exercise.ClassLibrary
             Multiplier = multiplierParameter;
             Product = multiplicandParameter * multiplierParameter;
             Formula = $"{Multiplicand} * {Multiplier} = " + String.Format("{0,2}", Product);
-            Color = Product % 5 == 0 ? (Product % 3 == 0 ? ConsoleColor.Green : ConsoleColor.Red)
-                : (Product % 3 == 0 ? ConsoleColor.DarkBlue : ConsoleColor.White);
         }
         public int Multiplicand { get; set; } //被乘數
         public int Multiplier { get; set; } //乘數
@@ -25,7 +23,6 @@ namespace Exercise.ClassLibrary
         public ConsoleColor Color { get; set; }
         public void PrintFormula()
         {
-            Console.ForegroundColor = Color;
             Console.Write(Formula + "    ");
             Console.ForegroundColor = ConsoleColor.White;
         }
@@ -62,19 +59,6 @@ namespace Exercise.ClassLibrary
     [Description("系統參數檔")]
     public sealed class LookupCode
     {
-        public LookupCode(Multiplication multiplication)
-        {
-            LookupType = multiplication.Multiplicand.ToString();
-            Code = multiplication.Multiplier.ToString();
-            Description = multiplication.Formula;
-            LookupValue = (short)multiplication.Product;
-            Text1 = multiplication.Color.ToString();
-            DeletedFlag = "N";
-            CreatedUser = "Admin";
-            CreatedDateTime = 0;
-            UpdatedUser = "Admin";
-            UpdatedDateTime = 0;
-        }
         /// <summary>
         /// 系統參數ID
         /// </summary>
@@ -217,32 +201,51 @@ namespace Exercise.ClassLibrary
     }
     public class LookupCodeService
     {
-        private MySqlConnection sqlConnection;
-        public LookupCodeService(MySqlConnection mySqlConnection)
+       public LookupCodeService(MySqlConnection mySqlConnection)
         {
-            sqlConnection = mySqlConnection;
-        }
-        public void CreateMultiplicationTable()
-        {
-            using (sqlConnection)
+            LookupCodes=new List<LookupCode>();
+            using (mySqlConnection)
             {
-                sqlConnection.Open();
-                for (int i = 2, LookupCount = 0; i < 10; i++)
+                mySqlConnection.Open();
+                using (MySqlCommand command = new MySqlCommand($"SELECT * FROM tb_wa_lookup_code2;", mySqlConnection))
                 {
-                    for (int j = 1; j < 10; j++)
+                    using (MySqlDataReader reader = command.ExecuteReader())
                     {
-                        LookupCount++;
-                        LookupCode lookupCode = new LookupCode(new Multiplication(i, j));
-                        String queryString = "INSERT INTO `vas_admin`.`tb_wa_lookup_code2`(`lookup_id`,`lookup_type`,`lookup_code`,`description`,`lookup_value`,`text1`,`del_flag`,`cr_user`,`cr_date`,`upd_user`,`upd_date`)" +
-                            $"VALUES({LookupCount},'{lookupCode.LookupType}','{lookupCode.Code}','{lookupCode.Description}',{lookupCode.LookupValue},'{lookupCode.Text1}',{lookupCode.DeletedFlag},'{lookupCode.CreatedUser}',{lookupCode.CreatedDateTime},'{lookupCode.UpdatedUser}',{lookupCode.UpdatedDateTime});";
-                        using (MySqlCommand command = new MySqlCommand(queryString, sqlConnection))
+                        while (reader.Read())
                         {
-                            command.ExecuteNonQuery();
+                            LookupCodes.Add(new LookupCode()
+                            {
+                                LookupId = Convert.ToInt32(reader["lookup_id"].ToString()),
+                                LookupType = reader["lookup_type"].ToString(),
+                                Code = reader["lookup_code"].ToString(),
+                                Description = reader["description"].ToString(),
+                                LookupValue = (short)Convert.ToInt32(reader["lookup_value"].ToString()),
+                                DeletedFlag = reader["del_flag"].ToString(),
+                                CreatedUser = reader["cr_user"].ToString(),
+                                CreatedDateTime = Convert.ToInt32(reader["cr_date"].ToString()),
+                                UpdatedUser = reader["upd_user"].ToString(),
+                                UpdatedDateTime = Convert.ToInt32(reader["upd_date"].ToString()),
+                            });
                         }
                     }
                 }
-                sqlConnection.Clone();
+                mySqlConnection.Close();
             }
+        }
+        public List<LookupCode> LookupCodes { get; set; }
+        public ConsoleColor GetConsoleColor(int productParameter)
+        {
+            ConsoleColor result = ConsoleColor.White;
+            int maxNumber = 0;
+            foreach (LookupCode item in LookupCodes)
+            {
+                if (productParameter % Convert.ToInt32(item.Code) == 0 && maxNumber < Convert.ToInt32(item.Code))
+                {
+                    maxNumber = Convert.ToInt32(item.Code);
+                    result = (ConsoleColor)item.LookupValue;
+                }
+            }
+            return result;
         }
     }
 }

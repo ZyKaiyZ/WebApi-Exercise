@@ -6,7 +6,7 @@ namespace Exercise.WebApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class MultiplicatissonTableController : ControllerBase
+    public class MultiplicationTableController : ControllerBase
     {
         //[HttpPost("{number:int:range(2,9)}")]
         [HttpPost]
